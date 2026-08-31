@@ -1,14 +1,17 @@
 package com.naveen.customer_service.dto;
 
 import com.naveen.customer_service.entity.EmploymentType;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Builder
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 public class CustomerResponse {
 
     private Long id;
