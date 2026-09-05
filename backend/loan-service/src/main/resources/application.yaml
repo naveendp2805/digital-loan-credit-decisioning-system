@@ -20,3 +20,6 @@ server:
 
 customer-service:
   url: ${CUSTOMER_SERVICE_URL}
+
+credit-decision-service:
+  url: ${CREDIT_DECISION_SERVICE_URL}

@@ -33,6 +33,10 @@ public class LoanRequest {
     @Max(value = 360, message = "Maximum tenure is 360 months")
     private Integer tenureMonths;
 
+    @NotNull(message = "Credit score is required")
+    @Min(value = 300, message = "Credit score must be at least 300")
+    @Max(value = 900, message = "Credit score cannot exceed 900")
+    private Integer creditScore;
 
     @NotNull(message = "Monthly income is required")
     @DecimalMin(value = "10000.00", message = "Monthly income must be at least 10000")

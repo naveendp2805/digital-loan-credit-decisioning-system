@@ -13,11 +13,11 @@ public class CreditDecisionRequest {
 
     private Long loanId;
 
-    private Long customerId;
-
-    private BigDecimal loanAmount;
-
-    private Integer tenureMonths;
+    private Integer creditScore;
 
     private BigDecimal monthlyIncome;
+
+    private BigDecimal existingDebt;
+
+    private BigDecimal loanAmount;
 }

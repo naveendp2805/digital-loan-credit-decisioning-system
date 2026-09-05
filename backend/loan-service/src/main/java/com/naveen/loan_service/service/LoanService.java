@@ -1,5 +1,6 @@
 package com.naveen.loan_service.service;
 
+import com.naveen.loan_service.client.CreditDecisionClient;
 import com.naveen.loan_service.client.CustomerClient;
 import com.naveen.loan_service.dto.*;
 import com.naveen.loan_service.entity.Loan;
@@ -20,8 +21,6 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static java.util.Arrays.stream;
-
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -30,10 +29,13 @@ public class LoanService {
     private final LoanRepository loanRepository;
     private final LoanMapper loanMapper;
     private final CustomerClient customerClient;
+    private final CreditDecisionClient creditDecisionClient;
 
     public LoanResponse createLoan(LoanRequest request) {
 
         validateCustomer(request.getCustomerId());
+
+        BigDecimal existingDebt = loanRepository.calculateExistingMonthlyDebt(request.getCustomerId());
 
         Loan loan = loanMapper.toEntity(request);
 
@@ -48,7 +50,27 @@ public class LoanService {
 
         Loan savedLoan = loanRepository.save(loan);
 
-        return loanMapper.toResponse(savedLoan);
+        CreditDecisionRequest creditRequest = CreditDecisionRequest.builder()
+                                        .loanId(savedLoan.getId())
+                                        .creditScore(request.getCreditScore())
+                                        .monthlyIncome(request.getMonthlyIncome())
+                                        .existingDebt(existingDebt)
+                                        .loanAmount(request.getLoanAmount())
+                                        .build();
+
+        CreditDecisionResponse creditResponse;
+
+        try {
+            creditResponse = creditDecisionClient.makeDecision(creditRequest);
+        } catch (FeignException e) {
+            throw new CreditDecisionException("Credit Decision Service is unavailable");
+        }
+
+        applyCreditDecision(savedLoan, creditResponse);
+
+        Loan updatedLoan = loanRepository.save(savedLoan);
+
+        return loanMapper.toResponse(updatedLoan);
     }
 
     private void validateCustomer(Long customerId) {
@@ -85,6 +107,32 @@ public class LoanService {
         }
 
         return BigDecimal.valueOf(emi).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void applyCreditDecision(Loan loan, CreditDecisionResponse creditResponse) {
+        loan.setCreditScore(creditResponse.getCreditScore());
+
+        String decision = creditResponse.getDecisionStatus();
+
+        switch (decision) {
+            case "APPROVED" -> {
+                loan.setLoanStatus(LoanStatus.APPROVED);
+                loan.setRejectionReason(null);
+                loan.setApprovedDate(LocalDateTime.now());
+            }
+
+            case "REJECTED" -> {
+                loan.setLoanStatus(LoanStatus.REJECTED);
+                loan.setRejectionReason(creditResponse.getDecisionReason());
+            }
+
+            case "REVIEW" -> {
+                loan.setLoanStatus(LoanStatus.PENDING);
+                loan.setRejectionReason(null);
+            }
+
+            default -> throw new CreditDecisionException("Invalid Credit decision received: " + decision);
+        }
     }
 
     @Transactional
