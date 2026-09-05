@@ -1,7 +1,7 @@
 package com.naveen.document_service.entity;
 
 public enum DocumentStatus {
-    APPROVED,
+    UPLOADED,
     VERIFIED,
     UNDER_REVIEW,
     REJECTED
