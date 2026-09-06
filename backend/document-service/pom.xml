@@ -88,7 +88,7 @@
 			<artifactId>cloudinary-http44</artifactId>
 			<version>1.39.0</version>
 		</dependency>
-	</dependencies>
+    </dependencies>
 	<dependencyManagement>
 		<dependencies>
 			<dependency>

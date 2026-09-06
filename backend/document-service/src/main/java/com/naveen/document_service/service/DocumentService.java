@@ -6,6 +6,7 @@ import com.naveen.document_service.entity.Document;
 import com.naveen.document_service.entity.DocumentStatus;
 import com.naveen.document_service.entity.DocumentType;
 import com.naveen.document_service.exception.DocumentNotFoundException;
+import com.naveen.document_service.exception.InvalidFileException;
 import com.naveen.document_service.repository.DocumentRepository;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,29 +26,45 @@ public class DocumentService {
     private final CloudinaryService cloudinaryService;
     private final FileValidationService fileValidationService;
     private final DocumentMapper mapper;
+    private final ExternalValidationService externalValidationService;
 
     public DocumentResponse uploadDocument(Long customerId, Long loanId, DocumentType documentType, MultipartFile file) throws IOException {
+
+        externalValidationService.validateCustomer(customerId);
+
+        externalValidationService.validateLoan(loanId);
+
+        externalValidationService.validateLoanOwnership(customerId, loanId);
+
+        if(documentRepository.existsByLoanIdAndDocumentType(loanId, documentType))
+            throw new InvalidFileException("This document type already exists for the loan");
 
         fileValidationService.validate(file);
 
         CloudinaryService.CloudinaryUploadResult cloudinaryUploadResult = cloudinaryService.upload(file);
 
-        Document document = Document.builder()
-                .customerId(customerId)
-                .loanId(loanId)
-                .documentType(documentType)
-                .fileName(file.getOriginalFilename())
-                .fileType(file.getContentType())
-                .fileSize(file.getSize())
-                .cloudinaryPublicId(cloudinaryUploadResult.publicId())
-                .cloudinaryUrl(cloudinaryUploadResult.secureUrl())
-                .status(DocumentStatus.UPLOADED)
-                .uploadedAt(LocalDateTime.now())
-                .build();
+        try {
+            Document document = Document.builder()
+                    .customerId(customerId)
+                    .loanId(loanId)
+                    .documentType(documentType)
+                    .fileName(file.getOriginalFilename())
+                    .fileType(file.getContentType())
+                    .fileSize(file.getSize())
+                    .cloudinaryPublicId(cloudinaryUploadResult.publicId())
+                    .cloudinaryUrl(cloudinaryUploadResult.secureUrl())
+                    .status(DocumentStatus.UPLOADED)
+                    .uploadedAt(LocalDateTime.now())
+                    .build();
 
-        Document savedDocument = documentRepository.save(document);
+            Document savedDocument = documentRepository.save(document);
 
-        return mapper.toResponse(savedDocument);
+            return mapper.toResponse(savedDocument);
+        } catch(Exception e) {
+            cloudinaryService.delete(cloudinaryUploadResult.publicId());
+
+            throw e;
+        }
     }
 
     @Transactional(readOnly = true)

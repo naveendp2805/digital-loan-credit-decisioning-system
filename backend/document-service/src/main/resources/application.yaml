@@ -33,3 +33,10 @@ management:
     web:
       exposure:
         include: health,info
+
+services:
+  customer:
+    url: ${CUSTOMER_SERVICE_URL}
+
+  loan:
+    url: ${LOAN_SERVICE_URL}

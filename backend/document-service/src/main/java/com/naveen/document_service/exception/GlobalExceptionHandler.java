@@ -13,6 +13,34 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(CustomerNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleCustomerNotFound(
+            CustomerNotFoundException exception
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "status", 404,
+                        "message", exception.getMessage(),
+                        "timestamp", LocalDateTime.now()
+                ));
+    }
+
+    @ExceptionHandler(LoanNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleLoanNotFound(
+            LoanNotFoundException exception
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "status", 404,
+                        "message", exception.getMessage(),
+                        "timestamp", LocalDateTime.now()
+                ));
+    }
+
     @ExceptionHandler(DocumentNotFoundException.class)
     public ResponseEntity<?> handleDocumentNotFound(
             DocumentNotFoundException ex
