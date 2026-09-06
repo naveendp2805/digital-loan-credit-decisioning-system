@@ -21,6 +21,14 @@ server:
 razorpay:
   key: ${RAZORPAY_KEY}
   secret: ${RAZORPAY_SECRET}
+  webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+
+services:
+  loan:
+    url: ${LOAN_SERVICE_URL}
+
+  customer:
+    url: ${CUSTOMER_SERVICE_URL}
 
 management:
   endpoints:
