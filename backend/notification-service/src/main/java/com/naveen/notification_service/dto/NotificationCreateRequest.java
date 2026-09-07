@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,8 +29,5 @@ public class NotificationCreateRequest {
     @NotBlank(message = "Recipient is required")
     private String recipient;
 
-    private String subject;
-
-    @NotBlank(message = "Message is required")
-    private String message;
+    private Map<String, Object> data;
 }

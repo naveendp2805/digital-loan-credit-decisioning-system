@@ -16,6 +16,31 @@ spring:
         format_sql: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+
 server:
   port: 8086
 
+services:
+  customer:
+    url: ${CUSTOMER_SERVICE_URL}
+
+  loan:
+    url: ${LOAN_SERVICE_URL}
+
+logging:
+  level:
+    org.springframework.mail: DEBUG
+    org.eclipse.angus.mail: DEBUG

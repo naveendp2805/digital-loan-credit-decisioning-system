@@ -6,15 +6,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class NotificationMapper {
 
-    public Notification toEntity(NotificationCreateRequest request) {
+    public Notification toEntity(NotificationCreateRequest request, String subject, String message) {
         return Notification.builder()
                 .customerId(request.getCustomerId())
                 .loanId(request.getLoanId())
                 .notificationType(request.getNotificationType())
                 .channel(request.getChannel())
                 .recipient(request.getRecipient())
-                .subject(request.getSubject())
-                .message(request.getMessage())
+                .subject(subject)
+                .message(message)
                 .build();
     }
 
