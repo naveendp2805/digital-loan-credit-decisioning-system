@@ -1,9 +1,6 @@
 package com.naveen.payment_service.service;
 
-import com.razorpay.Order;
-import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
-import com.razorpay.Utils;
+import com.razorpay.*;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -68,5 +65,13 @@ public class RazorpayService {
         } catch(Exception e) {
             return false;
         }
+    }
+
+    public Payment fetchPayment(String paymentId) throws RazorpayException {
+        return razorpayClient.payments.fetch(paymentId);
+    }
+
+    public Order fetchOrder(String orderId) throws RazorpayException{
+        return razorpayClient.orders.fetch(orderId);
     }
 }

@@ -1,7 +1,9 @@
 package com.naveen.payment_service.controller;
 
 import com.naveen.payment_service.dto.*;
+import com.naveen.payment_service.entity.Payment;
 import com.naveen.payment_service.service.PaymentService;
+import com.razorpay.RazorpayException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +23,13 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping("/orders")
-    public ResponseEntity<CreateOrderResponse> createPayment(@Valid @RequestBody CreatePaymentRequest request) {
+    public ResponseEntity<CreateOrderResponse> createPayment(@Valid @RequestBody CreatePaymentRequest request) throws RazorpayException {
         return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.createPayment(request));
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<PaymentResponse> verifyPayment(@Valid @RequestBody VerifyPaymentRequest request) {
-        return ResponseEntity.ok(paymentService.verifyPayment(request));
+    public ResponseEntity<Payment> verifyPayment(@Valid @RequestBody VerifyPaymentRequest request) throws RazorpayException {
+        return ResponseEntity.ok(paymentService.verifyPayment(request.razorpayOrderId(), request.razorpayPaymentId(), request.razorpaySignature()));
     }
 
     @GetMapping("/{paymentId}")

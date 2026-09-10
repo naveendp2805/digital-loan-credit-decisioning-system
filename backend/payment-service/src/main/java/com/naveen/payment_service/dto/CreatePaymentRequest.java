@@ -15,6 +15,8 @@ public record CreatePaymentRequest(
         @Positive(message = "Customer ID must be positive")
         Long customerId,
 
+        Long repaymentId,
+
         @NotNull(message = "Amount is required")
         @DecimalMin(value = "1.00", message = "Amount must be at least 1.00")
         @Digits(integer = 13, fraction = 2, message = "Amount must have maximum 2 decimal places")
