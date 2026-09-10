@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+
+            - id: customer-service
+              uri: http://localhost:8080
+              predicates:
+                - Path=/api/customers/**
+
+            - id: loan-service
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/loans/**
+
+            - id: credit-decision-service
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/credit-decisions/**
+
+            - id: document-service
+              uri: http://localhost:8083
+              predicates:
+                - Path=/api/documents/**
+
+            - id: payment-service
+              uri: http://localhost:8084
+              predicates:
+                - Path=/api/payments/**
+
+            - id: repayment-service
+              uri: http://localhost:8085
+              predicates:
+                - Path=/api/repayments/**
+
+            - id: notification-service
+              uri: http://localhost:8086
+              predicates:
+                - Path=/api/notifications/**
+
+
+server:
+  port: 8087

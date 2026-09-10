@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/documents")
+@RequestMapping("/api/documents")
 @RequiredArgsConstructor
 @Validated
 public class DocumentController {
