@@ -2,6 +2,7 @@ package com.naveen.payment_service.service;
 
 import com.naveen.payment_service.dto.CreateOrderResponse;
 import com.naveen.payment_service.dto.CreatePaymentRequest;
+import com.naveen.payment_service.dto.PaymentMapper;
 import com.naveen.payment_service.dto.PaymentResponse;
 import com.naveen.payment_service.entity.Payment;
 import com.naveen.payment_service.entity.PaymentStatus;
@@ -12,7 +13,6 @@ import com.naveen.payment_service.exception.PaymentAmountMismatchException;
 import com.naveen.payment_service.exception.PaymentNotFoundException;
 import com.naveen.payment_service.repository.PaymentRepository;
 import com.razorpay.Order;
-import com.razorpay.Payment;
 import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONObject;
@@ -33,7 +33,7 @@ public class PaymentService {
     private final ExternalValidationService externalValidationService;
     private final WebhookEventService webhookEventService;
 
-    @Value("${razorpay.key-id}")
+    @Value("${razorpay.key}")
     private String razorpayKeyId;
 
 
@@ -240,7 +240,7 @@ public class PaymentService {
         }
 
         // Fetch actual payment from Razorpay
-        Payment razorpayPayment =
+        com.razorpay.Payment razorpayPayment =
                 razorpayService.fetchPayment(
                         paymentId
                 );

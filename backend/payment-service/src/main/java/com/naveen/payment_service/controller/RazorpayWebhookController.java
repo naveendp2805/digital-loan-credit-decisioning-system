@@ -13,15 +13,17 @@ public class RazorpayWebhookController {
     private final PaymentService paymentService;
 
     @PostMapping("/razorpay")
-    public ResponseEntity<String> handleWebhook(@RequestHeader(value = "X-Razorpay-Signature", required = false) String signature,
-                                                @RequestBody String payload
-    ) {
+    public ResponseEntity<Void> handleRazorpayWebhook(
+            @RequestHeader(value = "X-Razorpay-Signature", required = false)
+            String signature,
 
-        if (signature == null || signature.isBlank())
-            return ResponseEntity.badRequest().body("Missing Razorpay webhook signature");
+            @RequestHeader(value = "x-razorpay-event-id", required = false)
+            String eventId,
 
-        paymentService.processWebhook(payload, signature);
+            @RequestBody String payload) {
 
-        return ResponseEntity.ok("Webhook processed successfully");
+        paymentService.processWebhook(payload, signature, eventId);
+
+        return ResponseEntity.ok().build();
     }
 }

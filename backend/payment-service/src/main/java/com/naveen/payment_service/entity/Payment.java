@@ -17,8 +17,8 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_payment_loan_id", columnList = "loan_id"),
                 @Index(name = "idx_payment_customer_id", columnList = "customer_id"),
-                @Index(name = "idx_payment_order_id", columnList = "order_id"),
-                @Index(name = "idx_payment_payment_id", columnList = "payment_id"),
+                @Index(name = "idx_payment_order_id", columnList = "razorpay_order_id"),
+                @Index(name = "idx_payment_payment_id", columnList = "razorpay_payment_id"),
                 @Index(name = "idx_payment_idempotency", columnList = "idempotency_key")
         }
 )
