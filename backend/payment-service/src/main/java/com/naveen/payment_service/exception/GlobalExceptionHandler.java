@@ -2,12 +2,14 @@ package com.naveen.payment_service.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
+
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -75,6 +77,34 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(PaymentAmountMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleAmountMismatch(
+            PaymentAmountMismatchException ex
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body((ErrorResponse) Map.of(
+                        "status", 404,
+                        "message", ex.getMessage(),
+                        "timestamp", LocalDateTime.now()
+                ));
+
+    }
+
+    @ExceptionHandler(PaymentAlreadyCompletedException.class)
+    public ResponseEntity<ErrorResponse> handleAlreadyCompleted(
+            PaymentAlreadyCompletedException ex
+    ) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body((ErrorResponse) Map.of(
+                        "status", 404,
+                        "message", ex.getMessage(),
+                        "timestamp", LocalDateTime.now()
+                ));
+    }
 
     @ExceptionHandler(
             MethodArgumentNotValidException.class

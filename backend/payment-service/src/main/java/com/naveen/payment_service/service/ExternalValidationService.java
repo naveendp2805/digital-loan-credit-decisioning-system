@@ -28,14 +28,16 @@ public class ExternalValidationService {
     }
 
 
-    public void validateLoanOwnership(Long customerId, Long loanId) {
+    public LoanResponse validateLoanOwnership(Long customerId, Long loanId) {
         try {
-            LoanResponse loan = loanClient.getLoanById(loanId);
-            if (loan.customerId() == null)
+            LoanResponse response = loanClient.getLoanById(loanId);
+            if (response.customerId() == null)
                 throw new CustomerNotFoundException("Loan " + loanId + " does not contain customer information");
 
-            if (!customerId.equals(loan.customerId()))
+            if (!customerId.equals(response.customerId()))
                 throw new LoanNotFoundException("Loan with ID " + loanId + " does not belong to Customer with ID " + customerId);
+
+            return response;
 
         } catch (FeignException.NotFound e) {
             throw new LoanNotFoundException("Loan not found with ID: " + loanId);

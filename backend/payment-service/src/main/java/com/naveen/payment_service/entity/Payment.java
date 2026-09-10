@@ -34,6 +34,9 @@ public class Payment {
     @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
+    @Column(name = "repayment_id")
+    private Long repaymentId;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
