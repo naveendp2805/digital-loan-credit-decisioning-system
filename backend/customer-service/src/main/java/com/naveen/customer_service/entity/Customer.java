@@ -43,6 +43,11 @@ public class Customer {
     @Column(name = "employment_type", nullable = false, length = 30)
     private EmploymentType employmentType;
 
+    @Enumerated(EnumType.STRING)
+    private Role role;
+
+    private String passwordHash;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

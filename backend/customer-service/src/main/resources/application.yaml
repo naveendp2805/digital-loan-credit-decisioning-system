@@ -16,6 +16,10 @@ spring:
 server:
   port: 8080
 
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 900000
+
 management:
   endpoints:
     web:
