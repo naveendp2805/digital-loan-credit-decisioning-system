@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,16 +24,15 @@ public class LoanController {
 
     private final LoanService loanService;
 
-
     @PostMapping
-    public ResponseEntity<LoanResponse> createLoan(@Valid @RequestBody LoanRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(loanService.createLoan(request));
+    public ResponseEntity<LoanResponse> createLoan(@Valid @RequestBody LoanRequest request, Authentication authentication) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(loanService.createLoan(request, authentication));
     }
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<LoanResponse> getLoan(@PathVariable @Positive(message = "Loan ID must be positive") Long id) {
-        return ResponseEntity.ok(loanService.getLoanById(id));
+    public ResponseEntity<LoanResponse> getLoan(@PathVariable @Positive(message = "Loan ID must be positive") Long id, Authentication authentication) {
+        return ResponseEntity.ok(loanService.getLoanById(id, authentication));
     }
 
 
@@ -43,8 +43,8 @@ public class LoanController {
 
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<LoanResponse>> getLoansByCustomer(@PathVariable @Positive(message = "Customer ID must be positive") Long customerId) {
-        return ResponseEntity.ok(loanService.getLoansByCustomer(customerId));
+    public ResponseEntity<List<LoanResponse>> getLoansByCustomer(@PathVariable @Positive(message = "Customer ID must be positive") Long customerId, Authentication authentication) {
+        return ResponseEntity.ok(loanService.getLoansByCustomer(customerId, authentication));
     }
 
 

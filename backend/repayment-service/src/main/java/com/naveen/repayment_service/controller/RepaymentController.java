@@ -1,5 +1,6 @@
 package com.naveen.repayment_service.controller;
 
+import com.naveen.repayment_service.dto.PaymentOrderResponse;
 import com.naveen.repayment_service.dto.RepaymentRequest;
 import com.naveen.repayment_service.dto.RepaymentResponse;
 import com.naveen.repayment_service.service.RepaymentService;
@@ -37,7 +38,7 @@ public class RepaymentController {
     }
 
     @PostMapping
-    public ResponseEntity<RepaymentResponse> makeRepayment(@Valid @RequestBody RepaymentRequest request) {
+    public ResponseEntity<PaymentOrderResponse> makeRepayment(@Valid @RequestBody RepaymentRequest request) {
         return ResponseEntity.ok(repaymentService.makeRepayment(request));
     }
 

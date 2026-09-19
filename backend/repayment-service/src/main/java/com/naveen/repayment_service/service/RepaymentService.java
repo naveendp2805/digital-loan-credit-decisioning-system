@@ -1,16 +1,16 @@
 package com.naveen.repayment_service.service;
 
 import com.naveen.repayment_service.client.LoanClient;
-import com.naveen.repayment_service.dto.LoanResponse;
-import com.naveen.repayment_service.dto.RepaymentMapper;
-import com.naveen.repayment_service.dto.RepaymentRequest;
-import com.naveen.repayment_service.dto.RepaymentResponse;
+import com.naveen.repayment_service.client.PaymentClient;
+import com.naveen.repayment_service.dto.*;
 import com.naveen.repayment_service.entity.Repayment;
 import com.naveen.repayment_service.entity.RepaymentStatus;
+import com.naveen.repayment_service.event.PaymentSuccessEvent;
 import com.naveen.repayment_service.exception.InvalidRepaymentException;
 import com.naveen.repayment_service.exception.ResourceNotFoundException;
 import com.naveen.repayment_service.repository.RepaymentRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +23,14 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class RepaymentService {
 
     private final RepaymentRepository repaymentRepository;
     private final LoanClient loanClient;
     private final RepaymentMapper mapper;
+    private final PaymentClient paymentClient;
+
 
     public List<RepaymentResponse> generateSchedule(Long loanId) {
 
@@ -98,32 +101,136 @@ public class RepaymentService {
         return mapper.toResponse(repayment);
     }
 
-    public RepaymentResponse makeRepayment(RepaymentRequest request) {
-        Repayment repayment = repaymentRepository.findByLoanIdAndInstallmentNumber(request.loanId(), request.installmentNumber())
-                .orElseThrow(() -> new ResourceNotFoundException("Installment not found"));
+    public PaymentOrderResponse makeRepayment(
+            RepaymentRequest request
+    ) {
 
-        if(repayment.getStatus() == RepaymentStatus.PAID)
+        Repayment repayment = repaymentRepository.findByLoanIdAndInstallmentNumber(request.loanId(), request.installmentNumber())
+                        .orElseThrow(() -> new ResourceNotFoundException("Installment not found"));
+
+        if (repayment.getStatus() == RepaymentStatus.PAID) {
             throw new InvalidRepaymentException("Installment is already paid");
+        }
 
         BigDecimal payment = request.paymentAmount().setScale(2, RoundingMode.HALF_UP);
 
-        if(payment.compareTo(repayment.getRemainingAmount()) > 0)
+        if (payment.compareTo(repayment.getRemainingAmount()) > 0) {
             throw new InvalidRepaymentException("Payment amount cannot exceed remaining amount");
+        }
 
-        BigDecimal newPaidAmount = repayment.getPaidAmount().add(payment);
-        BigDecimal newRemainingAmount = repayment.getInstallmentAmount().subtract(newPaidAmount);
+        PaymentOrderRequest paymentRequest =
+                new PaymentOrderRequest(
+                        repayment.getLoanId(),
+                        repayment.getCustomerId(),
+                        repayment.getId(),
+                        payment,
+                        "INR",
+                        "REPAYMENT",
+                        request.idempotencyKey()
+                );
+
+        return paymentClient.createPayment(paymentRequest);
+    }
+
+    public void processPaymentSuccess(
+            PaymentSuccessEvent event
+    ) {
+
+        if (event.repaymentId() == null) {
+
+            throw new InvalidRepaymentException(
+                    "Payment event does not contain repayment ID"
+            );
+        }
+
+        Repayment repayment =
+                repaymentRepository
+                        .findById(event.repaymentId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Repayment not found with ID: "
+                                                + event.repaymentId()
+                                )
+                        );
+
+        if (!repayment.getLoanId()
+                .equals(event.loanId())) {
+
+            throw new InvalidRepaymentException(
+                    "Payment loan does not match repayment loan"
+            );
+        }
+
+        if (!repayment.getCustomerId()
+                .equals(event.customerId())) {
+
+            throw new InvalidRepaymentException(
+                    "Payment customer does not match repayment customer"
+            );
+        }
+
+        BigDecimal payment =
+                event.amount()
+                        .setScale(2, RoundingMode.HALF_UP);
+
+        if (repayment.getStatus() == RepaymentStatus.PAID) {
+
+            log.info(
+                    "Repayment {} already paid. Ignoring duplicate payment event.",
+                    repayment.getId()
+            );
+
+            return;
+        }
+
+        if (payment.compareTo(
+                repayment.getRemainingAmount()
+        ) > 0) {
+
+            throw new InvalidRepaymentException(
+                    "Payment amount exceeds repayment remaining amount"
+            );
+        }
+
+        BigDecimal newPaidAmount =
+                repayment.getPaidAmount()
+                        .add(payment);
+
+        BigDecimal newRemainingAmount =
+                repayment.getInstallmentAmount()
+                        .subtract(newPaidAmount);
 
         repayment.setPaidAmount(newPaidAmount);
         repayment.setRemainingAmount(newRemainingAmount);
 
-        if(newRemainingAmount.compareTo(BigDecimal.ZERO) == 0) {
-            repayment.setStatus(RepaymentStatus.PAID);
-            repayment.setPaidDate(LocalDate.now());
+        if (newRemainingAmount.compareTo(
+                BigDecimal.ZERO
+        ) == 0) {
+
+            repayment.setStatus(
+                    RepaymentStatus.PAID
+            );
+
+            repayment.setPaidDate(
+                    LocalDate.now()
+            );
+
         } else {
-            repayment.setStatus(RepaymentStatus.PARTIALLY_PAID);
+
+            repayment.setStatus(
+                    RepaymentStatus.PARTIALLY_PAID
+            );
         }
 
-        return mapper.toResponse(repaymentRepository.save(repayment));
+        repaymentRepository.save(repayment);
+
+        log.info(
+                "Repayment updated successfully | repaymentId={} | paid={} | remaining={} | status={}",
+                repayment.getId(),
+                repayment.getPaidAmount(),
+                repayment.getRemainingAmount(),
+                repayment.getStatus()
+        );
     }
 
     @Transactional(readOnly = true)

@@ -1,4 +1,4 @@
-package com.naveen.loan_service.dto;
+package com.naveen.document_service.dto;
 
 import lombok.*;
 

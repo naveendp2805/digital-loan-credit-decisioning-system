@@ -4,11 +4,13 @@ import com.naveen.payment_service.dto.*;
 import com.naveen.payment_service.entity.Payment;
 import com.naveen.payment_service.service.PaymentService;
 import com.razorpay.RazorpayException;
+import jakarta.security.auth.message.config.AuthConfig;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,8 +25,8 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @PostMapping("/orders")
-    public ResponseEntity<CreateOrderResponse> createPayment(@Valid @RequestBody CreatePaymentRequest request) throws RazorpayException {
-        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.createPayment(request));
+    public ResponseEntity<CreateOrderResponse> createPayment(@Valid @RequestBody CreatePaymentRequest request, Authentication authentication) throws RazorpayException {
+        return ResponseEntity.status(HttpStatus.CREATED).body(paymentService.createPayment(request, authentication));
     }
 
     @PostMapping("/verify")
@@ -33,13 +35,13 @@ public class PaymentController {
     }
 
     @GetMapping("/{paymentId}")
-    public ResponseEntity<PaymentResponse> getPaymentById(@PathVariable @Positive(message = "Payment ID must be positive") Long paymentId) {
-        return ResponseEntity.ok(paymentService.getPaymentById(paymentId));
+    public ResponseEntity<PaymentResponse> getPaymentById(@PathVariable @Positive(message = "Payment ID must be positive") Long paymentId, Authentication authentication) {
+        return ResponseEntity.ok(paymentService.getPaymentById(paymentId, authentication));
     }
 
     @GetMapping("/loan/{loanId}")
-    public ResponseEntity<List<PaymentResponse>> getPaymentsByLoan(@PathVariable @Positive(message = "Loan ID must be positive") Long loanId) {
-        return ResponseEntity.ok(paymentService.getPaymentsByLoan(loanId));
+    public ResponseEntity<List<PaymentResponse>> getPaymentsByLoan(@PathVariable @Positive(message = "Loan ID must be positive") Long loanId, Authentication authentication) {
+        return ResponseEntity.ok(paymentService.getPaymentsByLoan(loanId, authentication));
     }
 
     @GetMapping("/customer/{customerId}")

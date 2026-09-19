@@ -20,6 +20,8 @@ public record RepaymentRequest(
         @NotNull(message = "Payment amount is required")
         @DecimalMin(value = "0.01", message = "Payment amount must be greater than 0")
         @Digits(integer = 13, fraction = 2, message = "Payment amount must have maximum 2 decimal places")
-        BigDecimal paymentAmount
+        BigDecimal paymentAmount,
+
+        String idempotencyKey
 ) {
 }

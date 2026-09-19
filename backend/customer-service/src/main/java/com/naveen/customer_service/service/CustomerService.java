@@ -42,6 +42,13 @@ public class CustomerService {
         return CustomerMapper.toDto(savedCustomer);
     }
 
+    public CustomerResponse getCurrentCustomer(String email) {
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Customer not Found!"));
+
+        return CustomerMapper.toDto(customer);
+    }
+
     public CustomerResponse getCustomerById(Long id) {
 
         Customer customer = customerRepository.findById(id)

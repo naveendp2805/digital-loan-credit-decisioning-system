@@ -15,12 +15,34 @@ spring:
       hibernate:
         format_sql: true
 
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    consumer:
+      group-id: repayment-service
+      auto-offset-reset: earliest
+
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+
+      properties:
+        spring.json.value.default.type: com.naveen.repayment_service.event.PaymentSuccessEvent
+        spring.json.use.type.headers: false
+        spring.json.trusted.packages: com.naveen.repayment_service.event
+
 server:
   port: 8085
+
+jwt:
+  secret: ${JWT_SECRET}
 
 services:
   loan:
     url: ${LOAN_SERVICE_URL}
+
+  payment:
+    url: ${PAYMENT_SERVICE_URL}
 
 management:
   endpoints:

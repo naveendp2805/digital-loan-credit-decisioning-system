@@ -15,6 +15,8 @@ import feign.FeignException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -31,7 +33,9 @@ public class LoanService {
     private final CustomerClient customerClient;
     private final CreditDecisionClient creditDecisionClient;
 
-    public LoanResponse createLoan(LoanRequest request) {
+    public LoanResponse createLoan(LoanRequest request, Authentication authentication) {
+
+        authorizeCustomerAccess(request.getCustomerId(), authentication);
 
         validateCustomer(request.getCustomerId());
 
@@ -136,10 +140,12 @@ public class LoanService {
     }
 
     @Transactional
-    public LoanResponse getLoanById(Long id) {
+    public LoanResponse getLoanById(Long id, Authentication authentication) {
 
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new LoanNotFoundException(id));
+
+        authorizeCustomerAccess(loan.getCustomerId(), authentication);
 
         return loanMapper.toResponse(loan);
     }
@@ -154,7 +160,9 @@ public class LoanService {
     }
 
     @Transactional
-    public List<LoanResponse> getLoansByCustomer(Long customerId) {
+    public List<LoanResponse> getLoansByCustomer(Long customerId, Authentication authentication) {
+
+        authorizeCustomerAccess(customerId, authentication);
 
         validateCustomer(customerId);
 
@@ -193,6 +201,43 @@ public class LoanService {
             throw new LoanNotFoundException(id);
 
         loanRepository.deleteById(id);
+    }
+
+    private void authorizeCustomerAccess(
+            Long customerId,
+            Authentication authentication) {
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+
+        if (isAdmin) {
+            return;
+        }
+
+        String authenticatedEmail =
+                authentication.getName();
+
+        CustomerResponse customer;
+
+        try {
+            customer = customerClient.getCustomerById(customerId);
+
+        } catch (FeignException.NotFound e) {
+            throw new CustomerNotFoundException(customerId);
+
+        } catch (FeignException e) {
+            throw new CustomerServiceException(
+                    "Customer service is unavailable"
+            );
+        }
+
+        if (!authenticatedEmail.equalsIgnoreCase(customer.getEmail())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "You are not authorized to access this customer's resources"
+            );
+        }
     }
 
 }

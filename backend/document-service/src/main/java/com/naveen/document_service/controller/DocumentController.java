@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,24 +29,25 @@ public class DocumentController {
     public ResponseEntity<DocumentResponse> uploadDocument(@RequestParam @Positive Long customerId,
                                                            @RequestParam @Positive Long loanId,
                                                            @RequestParam @NotNull DocumentType documentType,
-                                                           @RequestPart("file") MultipartFile file) throws IOException {
-        DocumentResponse response = documentService.uploadDocument(customerId, loanId, documentType, file);
+                                                           @RequestPart("file") MultipartFile file,
+                                                           Authentication authentication) throws IOException {
+        DocumentResponse response = documentService.uploadDocument(customerId, loanId, documentType, file, authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{documentId}")
-    public ResponseEntity<DocumentResponse> getDocument(@PathVariable Long documentId) {
-        return ResponseEntity.ok(documentService.getDocument(documentId));
+    public ResponseEntity<DocumentResponse> getDocument(@PathVariable Long documentId, Authentication authentication) {
+        return ResponseEntity.ok(documentService.getDocument(documentId, authentication));
     }
 
     @GetMapping("/customer/{customerId}")
-    public ResponseEntity<List<DocumentResponse>> getCustomerDocuments(@PathVariable Long customerId) {
-        return ResponseEntity.ok(documentService.getDocumentsByCustomerId(customerId));
+    public ResponseEntity<List<DocumentResponse>> getCustomerDocuments(@PathVariable Long customerId, Authentication authentication) {
+        return ResponseEntity.ok(documentService.getDocumentsByCustomerId(customerId, authentication));
     }
 
     @GetMapping("/loan/{loanId}")
-    public ResponseEntity<List<DocumentResponse>> getLoanDocuments(@PathVariable Long loanId) {
-        return ResponseEntity.ok(documentService.getDocumentsByLoanId(loanId));
+    public ResponseEntity<List<DocumentResponse>> getLoanDocuments(@PathVariable Long loanId, Authentication authentication) {
+        return ResponseEntity.ok(documentService.getDocumentsByLoanId(loanId, authentication));
     }
 
     @DeleteMapping("/{documentId}")

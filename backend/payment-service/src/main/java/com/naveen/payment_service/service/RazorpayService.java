@@ -56,17 +56,6 @@ public class RazorpayService {
         }
     }
 
-    public boolean verifyWebhookSignature(String payload, String signature) {
-        try {
-            if(webhookSecret == null || webhookSecret.isBlank())
-                return false;
-
-            return Utils.verifyWebhookSignature(payload, signature, webhookSecret);
-        } catch(Exception e) {
-            return false;
-        }
-    }
-
     public Payment fetchPayment(String paymentId) throws RazorpayException {
         return razorpayClient.payments.fetch(paymentId);
     }

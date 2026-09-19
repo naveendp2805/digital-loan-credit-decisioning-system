@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 
@@ -51,23 +52,34 @@ public class SecurityConfig {
 
                 .authorizeExchange(exchange -> exchange
 
-                        // Public
                         .pathMatchers("/api/auth/**")
                         .permitAll()
 
                         .pathMatchers("/actuator/health/**")
                         .permitAll()
 
-                            .pathMatchers(org.springframework.http.HttpMethod.POST, "/api/customers/**")
+                        .pathMatchers(
+                                HttpMethod.POST,
+                                "/api/customers/**"
+                        )
                         .hasRole("ADMIN")
 
-                        .pathMatchers(org.springframework.http.HttpMethod.PUT, "/api/customers/**")
+                        .pathMatchers(
+                                HttpMethod.PUT,
+                                "/api/customers/**"
+                        )
                         .hasRole("ADMIN")
 
-                        .pathMatchers(org.springframework.http.HttpMethod.DELETE, "/api/customers/**")
+                        .pathMatchers(
+                                HttpMethod.DELETE,
+                                "/api/customers/**"
+                        )
                         .hasRole("ADMIN")
 
-                        .pathMatchers(org.springframework.http.HttpMethod.GET, "/api/customers/**")
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/customers/**"
+                        )
                         .hasAnyRole("USER", "ADMIN")
 
                         .anyExchange()

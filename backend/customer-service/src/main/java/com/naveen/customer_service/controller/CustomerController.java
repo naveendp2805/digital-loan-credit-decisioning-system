@@ -5,10 +5,12 @@ import com.naveen.customer_service.dto.CustomerResponse;
 import com.naveen.customer_service.entity.Customer;
 import com.naveen.customer_service.service.CustomerService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,12 +29,24 @@ public class CustomerController {
     }
 
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @GetMapping("/me")
+    public ResponseEntity<CustomerResponse> getCurrentCustomer(Authentication authentication) {
+        return ResponseEntity.ok(customerService.getCurrentCustomer(authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<CustomerResponse> getCustomerById(@PathVariable Long id) {
         return ResponseEntity.ok(customerService.getCustomerById(id));
     }
 
+    @GetMapping("/internal/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<CustomerResponse> getCustomerInternal(@PathVariable @Positive Long id) {
+        return ResponseEntity.ok(customerService.getCustomerById(id));
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<CustomerResponse>> getAllCustomers() {
         return ResponseEntity.ok(customerService.getAllCustomers());

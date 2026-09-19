@@ -1,5 +1,7 @@
 package com.naveen.customer_service.service;
 
+import com.naveen.customer_service.dto.CustomerMapper;
+import com.naveen.customer_service.dto.CustomerResponse;
 import com.naveen.customer_service.dto.LoginRequest;
 import com.naveen.customer_service.dto.LoginResponse;
 import com.naveen.customer_service.entity.Customer;
@@ -32,5 +34,12 @@ public class AuthService {
                 .expiresIn(900)
                 .build();
 
+    }
+
+    public CustomerResponse getCustomerByEmail(String email) {
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Customer not Found!"));
+
+        return CustomerMapper.toDto(customer);
     }
 }

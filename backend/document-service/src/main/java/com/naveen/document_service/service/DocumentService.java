@@ -1,13 +1,24 @@
 package com.naveen.document_service.service;
 
+import com.naveen.document_service.client.CustomerClient;
+import com.naveen.document_service.client.LoanClient;
+import com.naveen.document_service.dto.CustomerResponse;
 import com.naveen.document_service.dto.DocumentMapper;
 import com.naveen.document_service.dto.DocumentResponse;
 import com.naveen.document_service.entity.Document;
 import com.naveen.document_service.entity.DocumentStatus;
 import com.naveen.document_service.entity.DocumentType;
+import com.naveen.document_service.entity.LoanResponse;
+import com.naveen.document_service.exception.CustomerNotFoundException;
 import com.naveen.document_service.exception.DocumentNotFoundException;
 import com.naveen.document_service.exception.InvalidFileException;
+import com.naveen.document_service.exception.LoanNotFoundException;
 import com.naveen.document_service.repository.DocumentRepository;
+import feign.FeignException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.jaas.AuthorityGranter;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,13 +38,16 @@ public class DocumentService {
     private final FileValidationService fileValidationService;
     private final DocumentMapper mapper;
     private final ExternalValidationService externalValidationService;
+    private final CustomerClient customerClient;
+    private final LoanClient loanClient;
 
-    public DocumentResponse uploadDocument(Long customerId, Long loanId, DocumentType documentType, MultipartFile file) throws IOException {
+    public DocumentResponse uploadDocument(Long customerId, Long loanId, DocumentType documentType, MultipartFile file, Authentication authentication) throws IOException {
+
+        authorizeCustomerAccess(customerId, authentication);
+        authorizeLoanAccess(loanId, authentication);
 
         externalValidationService.validateCustomer(customerId);
-
         externalValidationService.validateLoan(loanId);
-
         externalValidationService.validateLoanOwnership(customerId, loanId);
 
         if(documentRepository.existsByLoanIdAndDocumentType(loanId, documentType))
@@ -68,15 +82,19 @@ public class DocumentService {
     }
 
     @Transactional(readOnly = true)
-    public DocumentResponse getDocument(Long id) {
+    public DocumentResponse getDocument(Long id, Authentication authentication) {
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> new DocumentNotFoundException("Document not found with ID: " + id));
+
+        authorizeCustomerAccess(document.getCustomerId(), authentication);
 
         return mapper.toResponse(document);
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentResponse> getDocumentsByCustomerId(Long customerId) {
+    public List<DocumentResponse> getDocumentsByCustomerId(Long customerId, Authentication authentication) {
+        authorizeCustomerAccess(customerId, authentication);
+
         return documentRepository.findByCustomerId(customerId)
                 .stream()
                 .map(mapper::toResponse)
@@ -84,8 +102,10 @@ public class DocumentService {
     }
 
     @Transactional(readOnly = true)
-    public List<DocumentResponse> getDocumentsByLoanId(Long loanid) {
-        return documentRepository.findByLoanId(loanid)
+    public List<DocumentResponse> getDocumentsByLoanId(Long loanId, Authentication authentication) {
+        authorizeLoanAccess(loanId, authentication);
+
+        return documentRepository.findByLoanId(loanId)
                 .stream()
                 .map(mapper::toResponse)
                 .toList();
@@ -100,5 +120,60 @@ public class DocumentService {
         documentRepository.delete(document);
 
         return "Document with ID: " + id + " deleted Successfully";
+    }
+
+    private void authorizeCustomerAccess(Long customerId, Authentication authentication) {
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+
+        if (isAdmin) {
+            return;
+        }
+
+        String authenticatedEmail =
+                authentication.getName();
+
+        CustomerResponse customer;
+
+        try {
+
+            customer = customerClient.getCustomerById(customerId);
+
+        } catch (FeignException.NotFound e) {
+            throw new CustomerNotFoundException("Customer not found with id: " + customerId);
+        } catch (FeignException e) {
+            throw new CustomerNotFoundException("Customer service is unavailable");
+        }
+
+        if (!authenticatedEmail.equalsIgnoreCase(customer.getEmail())) {
+            throw new AccessDeniedException("You are not authorized to access this customer's resources");
+        }
+    }
+
+    private void authorizeLoanAccess(Long loanId, Authentication authentication) {
+
+        boolean isAdmin = authentication.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+
+        if (isAdmin) {
+            return;
+        }
+
+        LoanResponse loan;
+
+        try {
+            loan = loanClient.getLoanById(loanId);
+        } catch (FeignException.NotFound e) {
+            throw new LoanNotFoundException("Loan not found with ID: " + loanId);
+        } catch (FeignException e) {
+            throw new LoanNotFoundException("Loan service is unavailable");
+        }
+
+        authorizeCustomerAccess(loan.customerId(), authentication);
     }
 }
