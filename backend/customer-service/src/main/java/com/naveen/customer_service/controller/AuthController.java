@@ -1,9 +1,8 @@
 package com.naveen.customer_service.controller;
 
-import com.naveen.customer_service.dto.CustomerResponse;
-import com.naveen.customer_service.dto.LoginRequest;
-import com.naveen.customer_service.dto.LoginResponse;
+import com.naveen.customer_service.dto.*;
 import com.naveen.customer_service.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,6 +18,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
+    }
+    
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+        authService.logout(request.getRefreshToken());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

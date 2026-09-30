@@ -1,27 +1,34 @@
 package com.naveen.customer_service.service;
 
-import com.naveen.customer_service.entity.Role;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+
+import javax.crypto.SecretKey;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 @Service
 public class JwtService {
 
     private final SecretKey secretKey;
+
     private final long expiration;
 
-    public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration}") long expiration) {
+    public JwtService(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration}") long expiration) {
+
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+
         this.expiration = expiration;
     }
 
     public String generateToken(String email, String role) {
+
         Date now = new Date();
 
         Date expiryDate = new Date(now.getTime() + expiration);
@@ -35,4 +42,7 @@ public class JwtService {
                 .compact();
     }
 
+    public long getExpirationSeconds() {
+        return expiration / 1000;
+    }
 }
