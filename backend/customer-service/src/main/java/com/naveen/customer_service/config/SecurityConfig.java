@@ -1,5 +1,7 @@
 package com.naveen.customer_service.config;
 
+import com.naveen.customer_service.security.GoogleOAuth2SuccessHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,8 +10,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -24,15 +24,13 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    private final GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
 
     @Bean
     public JwtDecoder jwtDecoder() {
@@ -69,7 +67,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(
-            HttpSecurity http) throws Exception {
+            HttpSecurity http, GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler) throws Exception {
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -83,7 +81,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // Login remains public
-                        .requestMatchers("/api/auth/**")
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                        )
                         .permitAll()
 
                         // Admin operations
@@ -117,11 +119,15 @@ public class SecurityConfig {
                         .authenticated()
                 )
 
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+
+                .oauth2Login(oauth2 ->
+                        oauth2.successHandler(googleOAuth2SuccessHandler))
+
                 .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(jwt ->
-                                jwt.jwtAuthenticationConverter(
-                                        jwtAuthenticationConverter()
-                                )
+                                jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())
                         )
                 );
 

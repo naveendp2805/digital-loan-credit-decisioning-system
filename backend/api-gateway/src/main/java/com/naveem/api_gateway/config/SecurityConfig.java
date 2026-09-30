@@ -52,7 +52,11 @@ public class SecurityConfig {
 
                 .authorizeExchange(exchange -> exchange
 
-                        .pathMatchers("/api/auth/**")
+                        .pathMatchers(
+                                "/api/auth/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                        )
                         .permitAll()
 
                         .pathMatchers("/actuator/health/**")

@@ -48,6 +48,14 @@ public class Customer {
 
     private String passwordHash;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(unique = true)
+    private String providerId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
