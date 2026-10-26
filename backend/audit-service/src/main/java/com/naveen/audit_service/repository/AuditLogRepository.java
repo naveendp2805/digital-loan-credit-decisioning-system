@@ -1,8 +1,8 @@
 package com.naveen.audit_service.repository;
 
-import com.naveen.audit_service.entity.AuditAction;
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.ResourceType;
 import com.naveen.audit_service.entity.AuditLog;
-import com.naveen.audit_service.entity.ResourceType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -41,7 +41,7 @@ public class CustomerController {
     }
 
     @GetMapping("/internal/{id}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN', 'NOTIFICATION_SERVICE')")
     public ResponseEntity<CustomerResponse> getCustomerInternal(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(customerService.getCustomerById(id));
     }

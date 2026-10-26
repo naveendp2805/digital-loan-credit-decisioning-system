@@ -1,5 +1,9 @@
 package com.naveen.loan_service.service;
 
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.AuditStatus;
+import com.naveen.audit_common.enums.ResourceType;
+import com.naveen.audit_common.kafka.AuditEventPublisher;
 import com.naveen.loan_service.client.CreditDecisionClient;
 import com.naveen.loan_service.client.CustomerClient;
 import com.naveen.loan_service.dto.*;
@@ -12,11 +16,11 @@ import com.naveen.loan_service.exception.CustomerServiceException;
 import com.naveen.loan_service.exception.LoanNotFoundException;
 import com.naveen.loan_service.repository.LoanRepository;
 import feign.FeignException;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -32,6 +36,7 @@ public class LoanService {
     private final LoanMapper loanMapper;
     private final CustomerClient customerClient;
     private final CreditDecisionClient creditDecisionClient;
+    private final AuditEventPublisher auditEventPublisher;
 
     public LoanResponse createLoan(LoanRequest request, Authentication authentication) {
 
@@ -73,6 +78,19 @@ public class LoanService {
         applyCreditDecision(savedLoan, creditResponse);
 
         Loan updatedLoan = loanRepository.save(savedLoan);
+
+        auditEventPublisher.publish(
+                savedLoan.getCustomerId(),
+                null,
+                null,
+                AuditAction.LOAN_CREATED,
+                ResourceType.LOAN,
+                savedLoan.getId().toString(),
+                "Loan application created successfully",
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
 
         return loanMapper.toResponse(updatedLoan);
     }
@@ -150,6 +168,15 @@ public class LoanService {
         return loanMapper.toResponse(loan);
     }
 
+    @Transactional(readOnly = true)
+    public LoanResponse getLoanInternalById(Long id) {
+
+        Loan loan = loanRepository.findById(id)
+                .orElseThrow(() -> new LoanNotFoundException(id));
+
+        return loanMapper.toResponse(loan);
+    }
+
     @Transactional
     public List<LoanResponse> getAllLoans() {
 
@@ -184,15 +211,37 @@ public class LoanService {
     }
 
     public LoanResponse updateLoanStatus(Long id, LoanStatusUpdateRequest request) {
+
         Loan loan = loanRepository.findById(id)
                 .orElseThrow(() -> new LoanNotFoundException(id));
 
+        LoanStatus oldStatus = loan.getLoanStatus();
+
         loan.setLoanStatus(request.getStatus());
 
-        if(request.getStatus() == LoanStatus.APPROVED)
+        if (request.getStatus() == LoanStatus.APPROVED) {
             loan.setApprovedDate(LocalDateTime.now());
+        }
 
-        return loanMapper.toResponse(loanRepository.save(loan));
+        Loan updatedLoan = loanRepository.save(loan);
+
+        auditEventPublisher.publish(
+                updatedLoan.getCustomerId(),
+                null,
+                null,
+                AuditAction.LOAN_STATUS_CHANGED,
+                ResourceType.LOAN,
+                updatedLoan.getId().toString(),
+                "Loan status changed from "
+                        + oldStatus
+                        + " to "
+                        + updatedLoan.getLoanStatus(),
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
+
+        return loanMapper.toResponse(updatedLoan);
     }
 
     public void deleteLoan(Long id) {

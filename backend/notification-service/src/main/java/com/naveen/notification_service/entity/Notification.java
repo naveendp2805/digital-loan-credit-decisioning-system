@@ -23,6 +23,9 @@ public class Notification {
 
     private Long loanId;
 
+    @Column(name = "event_key", unique = true, length = 150)
+    private String eventKey;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationType notificationType;

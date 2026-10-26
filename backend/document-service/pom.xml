@@ -98,6 +98,12 @@
 			<artifactId>cloudinary-http44</artifactId>
 			<version>1.39.0</version>
 		</dependency>
+
+		<dependency>
+			<groupId>com.naveen</groupId>
+			<artifactId>audit-common</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
     </dependencies>
 	<dependencyManagement>
 		<dependencies>

@@ -1,5 +1,8 @@
 package com.naveen.audit_service.entity;
 
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.AuditStatus;
+import com.naveen.audit_common.enums.ResourceType;
 import jakarta.persistence.*;
 import lombok.*;
 

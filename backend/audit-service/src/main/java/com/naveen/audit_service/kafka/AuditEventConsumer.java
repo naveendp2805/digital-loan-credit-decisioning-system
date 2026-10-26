@@ -1,6 +1,6 @@
 package com.naveen.audit_service.kafka;
 
-import com.naveen.audit_service.dto.AuditEvent;
+import com.naveen.audit_common.dto.AuditEvent;
 import com.naveen.audit_service.entity.AuditLog;
 import com.naveen.audit_service.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -14,16 +14,6 @@ import org.springframework.stereotype.Component;
 public class AuditEventConsumer {
 
     private final AuditLogService auditLogService;
-
-
-    @KafkaListener(
-            topics = "audit-events",
-            groupId = "audit-service-group",
-            containerFactory = "auditKafkaListenerContainerFactory"
-    )
-    public void consumeAuditEvent() {
-        consumeAuditEvent(null);
-    }
 
     @KafkaListener(
             topics = "audit-events",

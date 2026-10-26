@@ -107,6 +107,12 @@ public class SecurityConfig {
                         )
                         .hasRole("ADMIN")
 
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/customers/internal/**"
+                        )
+                        .hasAnyRole("USER", "ADMIN", "NOTIFICATION_SERVICE")
+
                         // Customer read operations
                         .requestMatchers(
                                 HttpMethod.GET,

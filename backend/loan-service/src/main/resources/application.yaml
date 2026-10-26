@@ -7,6 +7,12 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
+    hikari:
+      max-lifetime: 240000
+      keepalive-time: 60000
+      validation-timeout: 5000
+      connection-timeout: 30000
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -14,6 +20,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 server:
   port: 8081

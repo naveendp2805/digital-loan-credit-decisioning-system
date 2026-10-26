@@ -1,4 +1,4 @@
-package com.naveen.audit_service.entity;
+package com.naveen.audit_common.enums;
 
 public enum AuditStatus {
 

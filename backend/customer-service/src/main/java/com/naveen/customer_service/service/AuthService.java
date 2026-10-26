@@ -1,5 +1,9 @@
 package com.naveen.customer_service.service;
 
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.AuditStatus;
+import com.naveen.audit_common.enums.ResourceType;
+import com.naveen.audit_common.kafka.AuditEventPublisher;
 import com.naveen.customer_service.dto.*;
 import com.naveen.customer_service.entity.AuthProvider;
 import com.naveen.customer_service.entity.Customer;
@@ -21,6 +25,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final AuditEventPublisher auditEventPublisher;
 
 
     public LoginResponse login(LoginRequest request) {
@@ -39,6 +44,19 @@ public class AuthService {
         String refreshToken = refreshTokenService.createRefreshToken();
 
         refreshTokenService.storeRefreshToken(refreshToken, email, role);
+
+        auditEventPublisher.publish(
+                customer.getId(),
+                customer.getEmail(),
+                customer.getRole().name(),
+                AuditAction.LOGIN,
+                ResourceType.AUTHENTICATION,
+                customer.getId().toString(),
+                "Customer login successful",
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
@@ -91,6 +109,19 @@ public class AuthService {
 
         refreshTokenService.storeRefreshToken(refreshToken,customer.getEmail(), customer.getRole().name());
 
+        auditEventPublisher.publish(
+                customer.getId(),
+                customer.getEmail(),
+                customer.getRole().name(),
+                AuditAction.LOGIN,
+                ResourceType.AUTHENTICATION,
+                customer.getId().toString(),
+                "Customer login successful",
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
+
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .tokenType("Bearer")
@@ -135,6 +166,19 @@ public class AuthService {
                 refreshToken,
                 saved.getEmail(),
                 saved.getRole().name()
+        );
+
+        auditEventPublisher.publish(
+                customer.getId(),
+                customer.getEmail(),
+                customer.getRole().name(),
+                AuditAction.LOGIN,
+                ResourceType.AUTHENTICATION,
+                customer.getId().toString(),
+                "Customer register successful",
+                AuditStatus.SUCCESS,
+                null,
+                null
         );
 
         return LoginResponse.builder()

@@ -1,9 +1,14 @@
 package com.naveen.customer_service.service;
 
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.AuditStatus;
+import com.naveen.audit_common.enums.ResourceType;
+import com.naveen.audit_common.kafka.AuditEventPublisher;
 import com.naveen.customer_service.dto.CustomerMapper;
 import com.naveen.customer_service.dto.CustomerRequest;
 import com.naveen.customer_service.dto.CustomerResponse;
 import com.naveen.customer_service.entity.Customer;
+import com.naveen.customer_service.entity.Role;
 import com.naveen.customer_service.exception.CustomerNotFoundException;
 import com.naveen.customer_service.repository.CustomerRepository;
 import jakarta.transaction.Transactional;
@@ -18,6 +23,7 @@ import java.util.List;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final AuditEventPublisher auditEventPublisher;
 
     public CustomerResponse createCustomer(CustomerRequest request) {
 
@@ -35,9 +41,24 @@ public class CustomerService {
                 .dateOfBirth(request.getDateOfBirth())
                 .monthlyIncome(request.getMonthlyIncome())
                 .employmentType(request.getEmploymentType())
+                .role(Role.USER)
                 .build();
 
         Customer savedCustomer = customerRepository.save(customer);
+
+        auditEventPublisher.publish(
+                savedCustomer.getId(),
+                savedCustomer.getEmail(),
+                savedCustomer.getRole().name(),
+                AuditAction.CUSTOMER_CREATED,
+                ResourceType.CUSTOMER,
+                savedCustomer.getId().toString(),
+                "Customer created successfully",
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
+
 
         return CustomerMapper.toDto(savedCustomer);
     }
@@ -85,6 +106,19 @@ public class CustomerService {
         customer.setEmploymentType(request.getEmploymentType());
 
         Customer updatedCustomer = customerRepository.save(customer);
+
+        auditEventPublisher.publish(
+                updatedCustomer.getId(),
+                updatedCustomer.getEmail(),
+                updatedCustomer.getRole().name(),
+                AuditAction.CUSTOMER_UPDATED,
+                ResourceType.CUSTOMER,
+                updatedCustomer.getId().toString(),
+                "Customer updated successfully",
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
 
         return CustomerMapper.toDto(updatedCustomer);
     }

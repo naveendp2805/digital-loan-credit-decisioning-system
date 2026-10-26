@@ -18,10 +18,25 @@ public class ExternalValidationService {
     public void validateCustomer(Long customerId) {
         try {
             customerClient.getCustomerById(customerId);
-        } catch(FeignException.NotFound e) {
-            throw new CustomerNotFoundException("Customer not found with ID: " + customerId);
-        } catch(FeignException e) {
-            throw new CustomerNotFoundException("Unable to validate Customer with ID: " + customerId);
+        } catch (FeignException.NotFound e) {
+            throw new CustomerNotFoundException(
+                    "Customer not found with ID: " + customerId
+            );
+        } catch (FeignException.Unauthorized e) {
+            throw new IllegalStateException(
+                    "Customer Service authentication failed (HTTP 401)",
+                    e
+            );
+        } catch (FeignException.Forbidden e) {
+            throw new IllegalStateException(
+                    "Notification Service is not authorized to access Customer Service (HTTP 403)",
+                    e
+            );
+        } catch (FeignException e) {
+            throw new IllegalStateException(
+                    "Customer Service request failed with HTTP status: " + e.status(),
+                    e
+            );
         }
     }
 

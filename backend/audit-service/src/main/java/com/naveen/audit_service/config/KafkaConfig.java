@@ -1,6 +1,6 @@
 package com.naveen.audit_service.config;
 
-import com.naveen.audit_service.dto.AuditEvent;
+import com.naveen.audit_common.dto.AuditEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -10,6 +10,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -47,7 +48,7 @@ public class KafkaConfig {
 
         JacksonJsonDeserializer<AuditEvent> deserializer = new JacksonJsonDeserializer<>(AuditEvent.class);
 
-        deserializer.addTrustedPackages("com.naveen.audit_service.dto");
+        deserializer.addTrustedPackages("com.naveen.audit_common.dto");
 
         deserializer.setUseTypeHeaders(false);
 
@@ -120,7 +121,11 @@ public class KafkaConfig {
 
         FixedBackOff backOff = new FixedBackOff(1000L, 2L);
 
-        return new DefaultErrorHandler(recoverer, backOff);
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
+
+        errorHandler.setLogLevel(KafkaException.Level.ERROR);
+
+        return errorHandler;
     }
 
     @Bean

@@ -35,6 +35,16 @@ public class LoanController {
         return ResponseEntity.ok(loanService.getLoanById(id, authentication));
     }
 
+    @GetMapping("/internal/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize(
+            "hasRole('NOTIFICATION_SERVICE')"
+    )
+    public ResponseEntity<LoanResponse> getLoanInternal(
+            @PathVariable
+            @Positive(message = "Loan ID must be positive") Long id) {
+
+        return ResponseEntity.ok(loanService.getLoanInternalById(id));
+    }
 
     @GetMapping
     public ResponseEntity<List<LoanResponse>> getAllLoans() {

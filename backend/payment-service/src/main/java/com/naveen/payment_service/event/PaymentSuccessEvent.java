@@ -1,3 +1,4 @@
+
 package com.naveen.payment_service.event;
 
 import java.math.BigDecimal;
@@ -9,6 +10,8 @@ public record PaymentSuccessEvent(
         Long repaymentId,
         BigDecimal amount,
         String currency,
-        String transactionReference
+        String transactionReference,
+        String customerName,
+        String email
 ) {
 }

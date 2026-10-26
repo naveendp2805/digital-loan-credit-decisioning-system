@@ -1,6 +1,9 @@
+
 package com.naveen.notification_service.event;
 
 import lombok.*;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -9,15 +12,13 @@ import lombok.*;
 @Builder
 public class PaymentSuccessEvent {
 
-    private Long customerId;
-
+    private Long paymentId;
     private Long loanId;
-
-    private String paymentId;
-
+    private Long customerId;
+    private Long repaymentId;
+    private BigDecimal amount;
+    private String currency;
+    private String transactionReference;
     private String customerName;
-
     private String email;
-
-    private Double amount;
 }

@@ -12,6 +12,10 @@ import com.naveen.credit_decision_service.repository.CreditDecisionRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.AuditStatus;
+import com.naveen.audit_common.enums.ResourceType;
+import com.naveen.audit_common.kafka.AuditEventPublisher;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,8 +28,8 @@ import java.util.List;
 public class CreditDecisionService {
 
     private final CreditDecisionRepository creditDecisionRepository;
-
     private final CreditDecisionMapper mapper;
+    private final AuditEventPublisher auditEventPublisher;
 
     public CreditDecisionResponse makeDecision(CreditDecisionRequest request) {
 
@@ -50,6 +54,19 @@ public class CreditDecisionService {
         decision.setUpdatedAt(now);
 
         CreditDecision saved = creditDecisionRepository.save(decision);
+
+        auditEventPublisher.publish(
+                saved.getLoanId(),
+                null,
+                null,
+                AuditAction.CREDIT_DECISION_CREATED,
+                ResourceType.CREDIT_DECISION,
+                saved.getId().toString(),
+                "Credit decision created successfully for Loan ID: " + saved.getLoanId(),
+                AuditStatus.SUCCESS,
+                null,
+                null
+        );
 
         return mapper.toResponse(saved);
     }

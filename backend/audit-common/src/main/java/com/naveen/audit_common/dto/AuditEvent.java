@@ -1,8 +1,8 @@
-package com.naveen.audit_service.dto;
+package com.naveen.audit_common.dto;
 
-import com.naveen.audit_service.entity.AuditAction;
-import com.naveen.audit_service.entity.AuditStatus;
-import com.naveen.audit_service.entity.ResourceType;
+import com.naveen.audit_common.enums.AuditAction;
+import com.naveen.audit_common.enums.AuditStatus;
+import com.naveen.audit_common.enums.ResourceType;
 import lombok.*;
 
 import java.time.Instant;

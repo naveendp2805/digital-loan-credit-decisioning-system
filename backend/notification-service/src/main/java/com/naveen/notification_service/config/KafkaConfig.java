@@ -7,6 +7,7 @@ import com.naveen.notification_service.exception.CustomerNotFoundException;
 import com.naveen.notification_service.exception.LoanNotFoundException;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
@@ -14,8 +15,15 @@ import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer;
-import org.springframework.mail.MailException;
 import org.springframework.util.backoff.FixedBackOff;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,11 +31,14 @@ import java.util.Map;
 @Configuration
 public class KafkaConfig {
 
+    @Value("${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}")
+    private String bootstrapServers;
+
     private Map<String, Object> consumerProperties() {
 
         Map<String, Object> properties = new HashMap<>();
 
-        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        properties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
         properties.put(ConsumerConfig.GROUP_ID_CONFIG, "notification-service");
 
@@ -53,9 +64,14 @@ public class KafkaConfig {
     @Bean
     public ConsumerFactory<String, PaymentSuccessEvent> paymentSuccessConsumerFactory() {
 
-        JacksonJsonDeserializer<PaymentSuccessEvent> deserializer = new JacksonJsonDeserializer<>(PaymentSuccessEvent.class);
+        JacksonJsonDeserializer<PaymentSuccessEvent> deserializer =
+                new JacksonJsonDeserializer<>(PaymentSuccessEvent.class);
 
-        deserializer.addTrustedPackages("com.naveen.notification_service.event");
+        deserializer.addTrustedPackages(
+                "com.naveen.notification_service.event"
+        );
+
+        deserializer.setUseTypeHeaders(false);
 
         return new DefaultKafkaConsumerFactory<>(consumerProperties(), new StringDeserializer(), deserializer);
     }
@@ -103,18 +119,55 @@ public class KafkaConfig {
         return factory;
     }
 
+    @Bean(name = "dltProducerFactory")
+    public ProducerFactory<String, Object> dltProducerFactory() {
+        Map<String, Object> properties = new HashMap<>();
+
+        properties.put(
+                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG,
+                bootstrapServers
+        );
+        properties.put(
+                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+                StringSerializer.class
+        );
+        properties.put(
+                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+                JsonSerializer.class
+        );
+
+        return new DefaultKafkaProducerFactory<>(properties);
+    }
+
+    @Bean(name = "dltKafkaTemplate")
+    public KafkaTemplate<String, Object> dltKafkaTemplate() {
+        return new KafkaTemplate<>(dltProducerFactory());
+    }
+
     @Bean
-    public DefaultErrorHandler kafkaErrorHandler() {
+    public DefaultErrorHandler kafkaErrorHandler(
+            @org.springframework.beans.factory.annotation.Qualifier("dltKafkaTemplate")
+            KafkaTemplate<String, Object> kafkaTemplate) {
 
-        FixedBackOff fixedBackOff = new FixedBackOff(0L, 0L);
+        DeadLetterPublishingRecoverer recoverer =
+                new DeadLetterPublishingRecoverer(
+                        kafkaTemplate,
+                        (record, exception) ->
+                                new TopicPartition(
+                                        record.topic() + ".DLT",
+                                        0
+                                )
+                );
 
-        DefaultErrorHandler errorHandler = new DefaultErrorHandler(fixedBackOff);
+        FixedBackOff fixedBackOff = new FixedBackOff(2000L, 3L);
+
+        DefaultErrorHandler errorHandler =
+                new DefaultErrorHandler(recoverer, fixedBackOff);
 
         errorHandler.addNotRetryableExceptions(
                 CustomerNotFoundException.class,
                 LoanNotFoundException.class,
-                IllegalArgumentException.class,
-                MailException.class
+                IllegalArgumentException.class
         );
 
         return errorHandler;

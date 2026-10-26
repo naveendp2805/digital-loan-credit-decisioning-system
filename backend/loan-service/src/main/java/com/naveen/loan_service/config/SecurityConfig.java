@@ -88,6 +88,13 @@ public class SecurityConfig {
                         )
                         .hasAnyRole("USER", "ADMIN")
 
+                        // Internal loan lookup for trusted services
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/loans/internal/**"
+                        )
+                        .hasRole("NOTIFICATION_SERVICE")
+
                         // Individual loan/customer reads
                         .requestMatchers(
                                 HttpMethod.GET,
