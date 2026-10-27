@@ -2,6 +2,7 @@ package com.naveen.payment_service.service;
 
 import com.naveen.payment_service.client.CustomerClient;
 import com.naveen.payment_service.client.LoanClient;
+import com.naveen.payment_service.client.RepaymentClient;
 import com.naveen.payment_service.dto.*;
 import com.naveen.payment_service.entity.LoanResponse;
 import com.naveen.payment_service.entity.Payment;
@@ -38,6 +39,7 @@ public class PaymentService {
     private final PaymentEventPublisher paymentEventPublisher;
     private final CustomerClient customerClient;
     private final LoanClient loanClient;
+    private final RepaymentClient repaymentClient;
 
     @Value("${razorpay.key}")
     private String razorpayKeyId;
@@ -91,23 +93,78 @@ public class PaymentService {
             );
         }
 
-        if (request.repaymentId() != null) {
 
-            boolean alreadyPaid =
-                    paymentRepository.existsByRepaymentIdAndStatus(
-                            request.repaymentId(),
-                            PaymentStatus.SUCCESS
-                    );
+        if (request.paymentType() == PaymentType.REPAYMENT) {
 
-            if (alreadyPaid) {
+            if (request.repaymentId() == null) {
+                throw new InvalidPaymentException(
+                        "Repayment ID is required for repayment payments"
+                );
+            }
 
+            final RepaymentResponse repayment;
+
+            try {
+                repayment = repaymentClient.getRepaymentById(
+                        request.repaymentId()
+                );
+            } catch (FeignException.NotFound ex) {
+                throw new InvalidPaymentException(
+                        "Repayment not found: " + request.repaymentId()
+                );
+            } catch (FeignException ex) {
+                throw new InvalidPaymentException(
+                        "Unable to validate repayment because Repayment Service is unavailable"
+                );
+            }
+
+            if (!request.loanId().equals(repayment.loanId())
+                    || !request.customerId().equals(repayment.customerId())) {
+                throw new InvalidPaymentException(
+                        "Repayment does not belong to the specified loan and customer"
+                );
+            }
+
+            if ("PAID".equalsIgnoreCase(repayment.status())) {
                 throw new PaymentAlreadyCompletedException(
-                        "Repayment "
-                                + request.repaymentId()
+                        "Repayment " + request.repaymentId()
                                 + " has already been paid"
                 );
             }
+
+            BigDecimal remainingAmount = repayment.remainingAmount();
+
+            if (remainingAmount == null
+                    || remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new PaymentAlreadyCompletedException(
+                        "Repayment has no outstanding balance"
+                );
+            }
+
+            if (request.amount().compareTo(remainingAmount) > 0) {
+                throw new InvalidPaymentException(
+                        "Payment amount exceeds repayment remaining amount"
+                );
+            }
+
+            List<Payment> existingPayments =
+                    paymentRepository.findByRepaymentId(
+                            request.repaymentId()
+                    );
+
+            boolean outstandingOrderExists = existingPayments.stream()
+                    .anyMatch(payment ->
+                            payment.getStatus() == PaymentStatus.CREATED
+                                    || payment.getStatus() == PaymentStatus.PENDING
+                    );
+
+            if (outstandingOrderExists) {
+                throw new InvalidPaymentException(
+                        "An existing payment order is still pending for this repayment"
+                );
+            }
         }
+
 
         validateAmount(request.amount());
 
@@ -264,6 +321,83 @@ public class PaymentService {
         paymentEventPublisher.publishPaymentSuccess(
                 savedPayment
         );
+
+        return savedPayment;
+    }
+
+    @Transactional
+    public Payment reconcileCapturedPayment(
+            Long localPaymentId,
+            String razorpayPaymentId
+    ) throws RazorpayException {
+
+        Payment payment = paymentRepository.findById(localPaymentId)
+                .orElseThrow(() ->
+                        new InvalidPaymentException(
+                                "Local payment not found: " + localPaymentId
+                        )
+                );
+
+        // Idempotency: don't process an already successful payment again.
+        if (payment.getStatus() == PaymentStatus.SUCCESS) {
+            if (!razorpayPaymentId.equals(payment.getRazorpayPaymentId())) {
+                throw new InvalidPaymentException(
+                        "Payment is already successful with a different Razorpay payment ID"
+                );
+            }
+            return payment;
+        }
+
+        // Prevent a Razorpay payment ID from being reused locally.
+        var existingPayment =
+                paymentRepository.findByRazorpayPaymentId(razorpayPaymentId);
+
+        if (existingPayment.isPresent()
+                && !existingPayment.get().getId().equals(payment.getId())) {
+            throw new InvalidPaymentException(
+                    "Razorpay payment ID is already associated with another payment"
+            );
+        }
+
+        // Retrieve authoritative payment details from Razorpay.
+        com.razorpay.Payment razorpayPayment =
+                razorpayService.fetchPayment(razorpayPaymentId);
+
+        String razorpayOrderId = razorpayPayment.get("order_id");
+
+        if (!payment.getRazorpayOrderId().equals(razorpayOrderId)) {
+            throw new InvalidPaymentException(
+                    "Razorpay payment does not belong to the expected order"
+            );
+        }
+
+        long actualAmount =
+                ((Number) razorpayPayment.get("amount")).longValue();
+
+        long expectedAmount = payment.getAmount()
+                .movePointRight(2)
+                .longValueExact();
+
+        if (actualAmount != expectedAmount) {
+            throw new PaymentAmountMismatchException(
+                    "Razorpay payment amount does not match expected payment amount"
+            );
+        }
+
+        String status = razorpayPayment.get("status");
+
+        if (!"captured".equalsIgnoreCase(status)) {
+            throw new InvalidPaymentException(
+                    "Razorpay payment is not captured. Current status: " + status
+            );
+        }
+
+        payment.setRazorpayPaymentId(razorpayPaymentId);
+        payment.setStatus(PaymentStatus.SUCCESS);
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        paymentEventPublisher.publishPaymentSuccess(savedPayment);
 
         return savedPayment;
     }

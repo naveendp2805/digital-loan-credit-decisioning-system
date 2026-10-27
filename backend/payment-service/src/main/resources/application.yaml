@@ -19,7 +19,7 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 server:
-  port: 8084
+  port: 8085
 
 razorpay:
   key: ${RAZORPAY_KEY}
@@ -30,10 +30,13 @@ jwt:
 
 services:
   loan:
-    url: ${LOAN_SERVICE_URL}
+    url: ${LOAN_SERVICE_URL:http://localhost:8082}
 
   customer:
-    url: ${CUSTOMER_SERVICE_URL}
+    url: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
+
+  repayment:
+    url: ${REPAYMENT_SERVICE_URL:http://localhost:8086}
 
 management:
   endpoints:

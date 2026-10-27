@@ -32,7 +32,7 @@ spring:
         spring.json.trusted.packages: com.naveen.repayment_service.event
 
 server:
-  port: 8085
+  port: 8086
 
 jwt:
   secret: ${JWT_SECRET}

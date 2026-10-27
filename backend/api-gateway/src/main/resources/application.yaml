@@ -1,3 +1,4 @@
+
 spring:
   application:
     name: api-gateway
@@ -6,61 +7,77 @@ spring:
     gateway:
       server:
         webflux:
-          routes:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                  - "http://localhost:8000"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders:
+                  - Authorization
+                  - Content-Type
+                  - Accept
+                maxAge: 3600
 
+          routes:
             - id: auth-service
-              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8080}
+              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/auth/**
 
             - id: oauth2-authorization
-              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8080}
+              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/oauth2/**
 
             - id: oauth2-callback
-              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8080}
+              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/login/oauth2/**
 
             - id: customer-service
-              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8080}
+              uri: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/customers/**
 
             - id: loan-service
-              uri: ${LOAN_SERVICE_URL:http://localhost:8081}
+              uri: ${LOAN_SERVICE_URL:http://localhost:8082}
               predicates:
                 - Path=/api/loans/**
 
             - id: credit-decision-service
-              uri: ${CREDIT_DECISION_SERVICE_URL:http://localhost:8082}
+              uri: ${CREDIT_DECISION_SERVICE_URL:http://localhost:8083}
               predicates:
                 - Path=/api/credit-decisions/**
 
             - id: document-service
-              uri: ${DOCUMENT_SERVICE_URL:http://localhost:8083}
+              uri: ${DOCUMENT_SERVICE_URL:http://localhost:8084}
               predicates:
                 - Path=/api/documents/**
 
             - id: payment-service
-              uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+              uri: ${PAYMENT_SERVICE_URL:http://localhost:8085}
               predicates:
                 - Path=/api/payments/**
 
             - id: repayment-service
-              uri: ${REPAYMENT_SERVICE_URL:http://localhost:8085}
+              uri: ${REPAYMENT_SERVICE_URL:http://localhost:8086}
               predicates:
                 - Path=/api/repayments/**
 
             - id: notification-service
-              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8086}
+              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8087}
               predicates:
                 - Path=/api/notifications/**
 
-
 server:
-  port: 8087
+  port: 8080
 
 jwt:
   secret: ${JWT_SECRET}

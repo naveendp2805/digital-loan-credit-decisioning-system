@@ -25,7 +25,7 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 server:
-  port: 8082
+  port: 8083
 
 jwt:
   secret: ${JWT_SECRET}

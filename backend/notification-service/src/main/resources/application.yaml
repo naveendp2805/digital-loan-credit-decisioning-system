@@ -43,7 +43,7 @@ spring:
 
 
 server:
-  port: 8086
+  port: 8087
 
 jwt:
   secret: ${JWT_SECRET}

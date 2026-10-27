@@ -32,15 +32,15 @@ services:
     env_file:
       - api-gateway/.env
     environment:
-      CUSTOMER_SERVICE_URL: http://customer-service:8080
-      LOAN_SERVICE_URL: http://loan-service:8081
-      CREDIT_DECISION_SERVICE_URL: http://credit-decision-service:8082
-      DOCUMENT_SERVICE_URL: http://document-service:8083
-      PAYMENT_SERVICE_URL: http://payment-service:8084
-      REPAYMENT_SERVICE_URL: http://repayment-service:8085
-      NOTIFICATION_SERVICE_URL: http://notification-service:8086
+      CUSTOMER_SERVICE_URL: http://customer-service:8081
+      LOAN_SERVICE_URL: http://loan-service:8082
+      CREDIT_DECISION_SERVICE_URL: http://credit-decision-service:8083
+      DOCUMENT_SERVICE_URL: http://document-service:8084
+      PAYMENT_SERVICE_URL: http://payment-service:8085
+      REPAYMENT_SERVICE_URL: http://repayment-service:8086
+      NOTIFICATION_SERVICE_URL: http://notification-service:8087
     ports:
-      - "8087:8087"
+      - "8080:8080"
     depends_on:
       - customer-service
       - loan-service
@@ -61,7 +61,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8080:8080"
+      - "8081:8081"
     depends_on:
       - kafka
     networks:
@@ -74,11 +74,11 @@ services:
     env_file:
       - loan-service/.env
     environment:
-      CUSTOMER_SERVICE_URL: http://customer-service:8080
-      CREDIT_DECISION_SERVICE_URL: http://credit-decision-service:8082
+      CUSTOMER_SERVICE_URL: http://customer-service:8081
+      CREDIT_DECISION_SERVICE_URL: http://credit-decision-service:8083
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8081:8081"
+      - "8082:8082"
     depends_on:
       - customer-service
       - credit-decision-service
@@ -93,10 +93,10 @@ services:
     env_file:
       - credit-decision-service/.env
     environment:
-      LOAN_SERVICE_URL: http://loan-service:8081
+      LOAN_SERVICE_URL: http://loan-service:8082
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8082:8082"
+      - "8083:8083"
     depends_on:
       - kafka
     networks:
@@ -109,11 +109,11 @@ services:
     env_file:
       - document-service/.env
     environment:
-      CUSTOMER_SERVICE_URL: http://customer-service:8080
-      LOAN_SERVICE_URL: http://loan-service:8081
+      CUSTOMER_SERVICE_URL: http://customer-service:8081
+      LOAN_SERVICE_URL: http://loan-service:8082
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8083:8083"
+      - "8084:8084"
     depends_on:
       - customer-service
       - loan-service
@@ -128,11 +128,13 @@ services:
     env_file:
       - payment-service/.env
     environment:
-      LOAN_SERVICE_URL: http://loan-service:8081
-      CUSTOMER_SERVICE_URL: http://customer-service:8080
+      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
+      LOAN_SERVICE_URL: http://loan-service:8082
+      CUSTOMER_SERVICE_URL: http://customer-service:8081
+      REPAYMENT_SERVICE_URL: http://repayment-service:8086
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8084:8084"
+      - "8085:8085"
     depends_on:
       - loan-service
       - customer-service
@@ -147,11 +149,11 @@ services:
     env_file:
       - repayment-service/.env
     environment:
-      LOAN_SERVICE_URL: http://loan-service:8081
-      PAYMENT_SERVICE_URL: http://payment-service:8084
+      LOAN_SERVICE_URL: http://loan-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8085
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8085:8085"
+      - "8086:8086"
     depends_on:
       - loan-service
       - payment-service
@@ -166,11 +168,11 @@ services:
     env_file:
       - notification-service/.env
     environment:
-      CUSTOMER_SERVICE_URL: http://customer-service:8080
-      LOAN_SERVICE_URL: http://loan-service:8081
+      CUSTOMER_SERVICE_URL: http://customer-service:8081
+      LOAN_SERVICE_URL: http://loan-service:8082
       KAFKA_BOOTSTRAP_SERVERS: kafka:9094
     ports:
-      - "8086:8086"
+      - "8087:8087"
     depends_on:
       - customer-service
       - loan-service

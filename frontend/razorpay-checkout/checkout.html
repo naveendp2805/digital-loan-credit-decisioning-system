@@ -1,0 +1,413 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Loan System - Razorpay Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f5f9;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 35px auto;
+            padding: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 18px #0000000d;
+        }
+
+        h1 { margin-top: 0; font-size: 25px; }
+        h2 { font-size: 19px; margin-top: 0; }
+
+        label {
+            display: block;
+            margin: 14px 0 6px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 18px;
+            border: 0;
+            border-radius: 7px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .secondary { background: #475569; }
+
+        .muted {
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 7px;
+            background: #eef2ff;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .hidden { display: none; }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>Digital Loan System</h1>
+    <p class="muted">
+        Login → Create repayment order → Razorpay Checkout → Verify payment
+    </p>
+
+    <section class="card" id="loginCard">
+        <h2>1. Login</h2>
+
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username"
+               placeholder="Registered email" required>
+
+        <label for="password">Password</label>
+        <input id="password" type="password"
+               autocomplete="current-password"
+               placeholder="Password" required>
+
+        <button id="loginButton" onclick="login()">Login</button>
+        <p class="muted">Your access token stays in page memory.</p>
+    </section>
+
+    <section class="card hidden" id="repaymentCard">
+        <h2>2. Create repayment order</h2>
+
+        <p id="loginStatus" class="status">Not logged in.</p>
+
+        <label for="loanId">Loan ID</label>
+        <input id="loanId" type="number" min="1" value="7" required>
+
+        <label for="installmentNumber">Installment number</label>
+        <input id="installmentNumber" type="number" min="1" value="1" required>
+
+        <label for="paymentAmount">Payment amount (₹)</label>
+        <input id="paymentAmount" type="number" min="0.01"
+               step="0.01" value="1170.26" required>
+
+        <label for="idempotencyKey">Idempotency Key</label>
+        <input id="idempotencyKey" type="text"
+               value="loan-7-installment-1-test-002"
+               maxlength="150" required>
+
+        <p class="muted">
+            Reuse the same key when retrying the same request.
+            Use a new unique key for a new payment attempt.
+        </p>
+
+        <button id="orderButton" onclick="createRepaymentOrder()">
+            Create Order & Pay
+        </button>
+
+        <button class="secondary" onclick="logout()">Logout</button>
+    </section>
+
+    <section class="card">
+        <h2>Activity</h2>
+        <div id="status" class="status">Please log in to begin.</div>
+        <pre id="details"></pre>
+    </section>
+</div>
+
+<script>
+    const CONFIG = {
+        loginUrl: "http://localhost:8080/api/auth/login",
+        repaymentUrl: "http://localhost:8080/api/repayments",
+
+        // Confirm this URL and request DTO against your PaymentController.
+        verifyUrl: "http://localhost:8080/api/payments/verify"
+    };
+
+    let accessToken = null;
+    let busy = false;
+
+    const statusElement = document.getElementById("status");
+    const detailsElement = document.getElementById("details");
+
+    function showStatus(message, details = "") {
+        statusElement.textContent = message;
+        detailsElement.textContent = details;
+    }
+
+    async function readResponse(response) {
+        const text = await response.text();
+        let data = {};
+
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch {
+            data = { rawResponse: text };
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || data.error || data.rawResponse ||
+                `HTTP ${response.status}`
+            );
+        }
+
+        return data;
+    }
+
+    function setBusy(value) {
+        busy = value;
+        document.getElementById("loginButton").disabled = value;
+        document.getElementById("orderButton").disabled = value;
+    }
+
+    async function login() {
+        if (busy) return;
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!email || !password) {
+            showStatus("Enter your email and password.");
+            return;
+        }
+
+        setBusy(true);
+        showStatus("Logging in...");
+
+        try {
+            const response = await fetch(CONFIG.loginUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await readResponse(response);
+
+            if (!data.accessToken) {
+                throw new Error("Login response does not contain accessToken.");
+            }
+
+            accessToken = data.accessToken;
+
+            document.getElementById("loginCard").classList.add("hidden");
+            document.getElementById("repaymentCard").classList.remove("hidden");
+            document.getElementById("loginStatus").textContent =
+                "Logged in successfully as " + email;
+            document.getElementById("password").value = "";
+
+            showStatus("Login successful. Enter the repayment details.");
+        } catch (error) {
+            showStatus(
+                "Login failed: " + error.message +
+                "\nIf the browser reports Failed to fetch, check CORS and service availability."
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function createRepaymentOrder() {
+        if (busy) return;
+
+        if (!accessToken) {
+            showStatus("Please log in first.");
+            return;
+        }
+
+        const loanId = Number(document.getElementById("loanId").value);
+        const installmentNumber =
+            Number(document.getElementById("installmentNumber").value);
+        const paymentAmount =
+            Number(document.getElementById("paymentAmount").value);
+        const idempotencyKey =
+            document.getElementById("idempotencyKey").value.trim();
+
+        if (!Number.isInteger(loanId) || loanId < 1 ||
+            !Number.isInteger(installmentNumber) || installmentNumber < 1 ||
+            !Number.isFinite(paymentAmount) || paymentAmount <= 0 ||
+            !Number.isFinite(Math.round(paymentAmount * 100)) ||
+            !idempotencyKey) {
+            showStatus("Enter valid repayment details and an idempotency key.");
+            return;
+        }
+
+        setBusy(true);
+        showStatus("Creating repayment order...");
+
+        try {
+            const response = await fetch(CONFIG.repaymentUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                    loanId,
+                    installmentNumber,
+                    paymentAmount,
+                    idempotencyKey
+                })
+            });
+
+            const order = await readResponse(response);
+
+            const missing = [
+                "razorpayOrderId",
+                "razorpayKeyId",
+                "amount"
+            ].filter(field => order[field] == null);
+
+            if (missing.length) {
+                throw new Error(
+                    "Unexpected repayment response. Missing fields: " +
+                    missing.join(", ") + "\n" + JSON.stringify(order, null, 2)
+                );
+            }
+
+            const amount = Number(order.amount);
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                throw new Error("The backend returned an invalid amount.");
+            }
+
+            if (typeof Razorpay === "undefined") {
+                throw new Error("Razorpay Checkout failed to load.");
+            }
+
+            showStatus(
+                "Order created. Opening Razorpay Checkout...",
+                JSON.stringify(order, null, 2)
+            );
+
+            const checkout = new Razorpay({
+                key: order.razorpayKeyId,
+                amount: Math.round(amount * 100),
+                currency: order.currency || "INR",
+                name: "Digital Loan System",
+                description: `Loan ${loanId}, installment ${installmentNumber}`,
+                order_id: order.razorpayOrderId,
+
+                handler: async function (result) {
+                    await verifyPayment(result);
+                },
+
+                modal: {
+                    ondismiss: function () {
+                        showStatus(
+                            "Checkout closed. The order may still be pending. " +
+                            "Check its status before retrying."
+                        );
+                        setBusy(false);
+                    }
+                },
+
+                theme: { color: "#2563eb" }
+            });
+
+            checkout.on("payment.failed", function (event) {
+                showStatus(
+                    "Razorpay reported a payment failure.",
+                    JSON.stringify(event.error || {}, null, 2)
+                );
+                setBusy(false);
+            });
+
+            checkout.open();
+        } catch (error) {
+            showStatus(
+                "Order creation failed: " + error.message +
+                "\nIf the error is Failed to fetch, check Repayment Service CORS."
+            );
+            setBusy(false);
+        }
+    }
+
+
+    async function verifyPayment(result) {
+        showStatus("Verifying payment with the backend...");
+
+        try {
+            const response = await fetch(CONFIG.verifyUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                    razorpayOrderId: result.razorpay_order_id,
+                    razorpayPaymentId: result.razorpay_payment_id,
+                    razorpaySignature: result.razorpay_signature
+                })
+            });
+
+            const verification = await readResponse(response);
+
+            showStatus(
+                "Payment verified successfully.",
+                JSON.stringify(verification, null, 2)
+            );
+        } catch (error) {
+            showStatus(
+                "Payment verification failed: " + error.message,
+                "Do not pay again yet. Check the payment status in Postman/backend first."
+            );
+        } finally {
+            setBusy(false);
+        }
+    }
+
+
+    function logout() {
+        accessToken = null;
+
+        document.getElementById("loginCard").classList.remove("hidden");
+        document.getElementById("repaymentCard").classList.add("hidden");
+        document.getElementById("password").value = "";
+
+        showStatus("Logged out. The in-memory access token was cleared.");
+    }
+</script>
+</body>
+</html>

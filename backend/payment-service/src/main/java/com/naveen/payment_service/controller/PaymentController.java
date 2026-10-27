@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.GrantedAuthority;
 
 import java.util.List;
 
@@ -32,6 +34,26 @@ public class PaymentController {
     @PostMapping("/verify")
     public ResponseEntity<Payment> verifyPayment(@Valid @RequestBody VerifyPaymentRequest request) throws RazorpayException {
         return ResponseEntity.ok(paymentService.verifyPayment(request.razorpayOrderId(), request.razorpayPaymentId(), request.razorpaySignature()));
+    }
+
+    @PostMapping("/reconcile")
+    public ResponseEntity<Payment> reconcilePayment(@Valid @RequestBody ReconcilePaymentRequest request, Authentication authentication) throws RazorpayException {
+
+        boolean isAdmin = authentication != null
+                && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch("ROLE_ADMIN"::equals);
+
+        if (!isAdmin) {
+            throw new AccessDeniedException("Only administrators can reconcile payments");
+        }
+
+        Payment payment = paymentService.reconcileCapturedPayment(
+                request.localPaymentId(),
+                request.razorpayPaymentId()
+        );
+
+        return ResponseEntity.ok(payment);
     }
 
     @GetMapping("/{paymentId}")
